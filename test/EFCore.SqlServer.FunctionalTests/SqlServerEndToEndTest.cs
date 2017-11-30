@@ -602,6 +602,52 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
+        [Fact]
+        public void Can_set_reference_twice()
+        {
+            using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
+            {
+                var options = Fixture.CreateOptions(testDatabase);
+                using (var context = new GameDbContext(options))
+                {
+                    context.Database.EnsureCreated();
+
+                    var player = new PlayerCharacter(new Level
+                    {
+                        Game = new Game()
+                    });
+                    var weapon = new Item
+                    {
+                        Id = 1,
+                        Game = player.Game
+                    };
+                    player.Items.Add(weapon);
+                    context.Characters.Add(player);
+
+                    context.SaveChanges();
+
+                    player.CurrentWeapon = weapon;
+                    context.SaveChanges();
+
+                    player.CurrentWeapon = null;
+                    context.SaveChanges();
+
+                    player.CurrentWeapon = weapon;
+                    context.SaveChanges();
+                }
+
+                using (var context = new GameDbContext(options))
+                {
+                    var player = context.Characters
+                        .Include(c => c.Items)
+                        .Include(c => c.CurrentWeapon)
+                        .ToList().Single();
+                    
+                    Assert.Equal(player.Items.Single(), player.CurrentWeapon);
+                }
+            }
+        }
+
         public abstract class Actor
         {
             protected Actor()
@@ -618,6 +664,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Level Level { get; set; }
             public virtual int GameId { get; private set; }
             public virtual Game Game { get; set; }
+            public virtual ICollection<Item> Items { get; set; } = new HashSet<Item>();
         }
 
         public class PlayerCharacter : Actor
@@ -645,6 +692,8 @@ namespace Microsoft.EntityFrameworkCore
 
             public virtual int MaxMP { get; set; }
             public virtual int MP { get; set; }
+
+            public virtual Item CurrentWeapon { get; set; }
         }
 
         public class Level
@@ -661,6 +710,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual int GameId { get; set; }
             public virtual Game Game { get; set; }
             public virtual Level Level { get; set; }
+            public virtual Actor Actor { get; set; }
         }
 
         public class Container : Item
@@ -699,9 +749,18 @@ namespace Microsoft.EntityFrameworkCore
                                 .WithMany()
                                 .HasForeignKey(nameof(Actor.GameId), "LevelId")
                                 .IsRequired();
+
+                            eb.HasMany(a => a.Items)
+                                .WithOne(i => i.Actor)
+                                .HasForeignKey(nameof(Item.GameId), "ActorId");
                         });
 
-                modelBuilder.Entity<PlayerCharacter>();
+                modelBuilder.Entity<PlayerCharacter>(eb =>
+                {
+                    eb.HasOne(p => p.CurrentWeapon)
+                        .WithOne()
+                        .HasForeignKey<PlayerCharacter>(nameof(PlayerCharacter.GameId), "CurrentWeaponId");
+                });
 
                 modelBuilder.Entity<Item>(eb => { eb.HasKey(l => new { l.GameId, l.Id }); });
 
