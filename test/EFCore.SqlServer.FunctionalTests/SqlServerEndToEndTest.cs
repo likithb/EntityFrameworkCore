@@ -543,6 +543,65 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
+        [Fact]
+        public async Task Can_include_derived_self_ref()
+        {
+            using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
+            {
+                var options = Fixture.CreateOptions(testDatabase);
+                using (var context = new GameDbContext(options))
+                {
+                    context.Database.EnsureCreated();
+
+                    var level = new Level
+                    {
+                        Game = new Game()
+                    };
+                    level.Items.Add(new Item
+                    {
+                        Id = 1,
+                        Game = level.Game
+                    });
+                    var container = new Container
+                    {
+                        Id = 2,
+                        Game = level.Game
+                    };
+                    container.Items.Add(new Item
+                    {
+                        Id = 3,
+                        Game = level.Game
+                    });
+                    level.Items.Add(container);
+                    context.Levels.Add(level);
+
+                    context.SaveChanges();
+                }
+
+                using (var context = new GameDbContext(options))
+                {
+                    var level = context.Levels
+                        .Include(c => c.Items)
+                        .Include(l => l.Items).ThenInclude<Level, Item, Container, IEnumerable<Item>>(c => c.Items)
+                        .ToList().First();
+
+                    Assert.Equal(2, level.Items.Count);
+                    Assert.Equal(1, level.Items.OfType<Container>().Single().Items.Count);
+                }
+
+                using (var context = new GameDbContext(options))
+                {
+                    var level = (await context.Levels
+                        .Include(c => c.Items)
+                        .Include(l => l.Items).ThenInclude<Level, Item, Container, IEnumerable<Item>>(c => c.Items)
+                        .ToListAsync()).First();
+
+                    Assert.Equal(2, level.Items.Count);
+                    Assert.Equal(1, level.Items.OfType<Container>().Single().Items.Count);
+                }
+            }
+        }
+
         public abstract class Actor
         {
             protected Actor()
@@ -593,6 +652,20 @@ namespace Microsoft.EntityFrameworkCore
             public virtual int Id { get; set; }
             public virtual int GameId { get; set; }
             public virtual Game Game { get; set; }
+            public virtual ICollection<Item> Items { get; set; } = new HashSet<Item>();
+        }
+
+        public class Item
+        {
+            public virtual int Id { get; set; }
+            public virtual int GameId { get; set; }
+            public virtual Game Game { get; set; }
+            public virtual Level Level { get; set; }
+        }
+
+        public class Container : Item
+        {
+            public virtual ICollection<Item> Items { get; set; } = new HashSet<Item>();
         }
 
         public class Game
@@ -612,6 +685,7 @@ namespace Microsoft.EntityFrameworkCore
             public DbSet<Game> Games { get; set; }
             public DbSet<Level> Levels { get; set; }
             public DbSet<PlayerCharacter> Characters { get; set; }
+            public DbSet<Item> Items { get; set; }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
             {
@@ -628,6 +702,10 @@ namespace Microsoft.EntityFrameworkCore
                         });
 
                 modelBuilder.Entity<PlayerCharacter>();
+
+                modelBuilder.Entity<Item>(eb => { eb.HasKey(l => new { l.GameId, l.Id }); });
+
+                modelBuilder.Entity<Container>();
 
                 modelBuilder.Entity<Game>(
                     eb =>
