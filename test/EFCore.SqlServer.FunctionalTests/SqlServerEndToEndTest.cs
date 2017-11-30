@@ -649,6 +649,37 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
+        [Fact]
+        public void Adding_an_item_to_a_collection_marks_it_as_modified()
+        {
+            using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
+            {
+                var options = Fixture.CreateOptions(testDatabase);
+                using (var context = new GameDbContext(options))
+                {
+                    context.Database.EnsureCreated();
+
+                    var player = new PlayerCharacter(new Level
+                    {
+                        Game = new Game()
+                    });
+                    var weapon = new Item
+                    {
+                        Id = 1,
+                        Game = player.Game
+                    };
+                    context.Characters.Add(player);
+
+                    context.SaveChanges();
+
+                    player.Items.Add(weapon);
+
+                    context.ChangeTracker.DetectChanges();
+                    Assert.True(context.Entry(player).Collection(p => p.Items).IsModified);
+                }
+            }
+        }
+
         public abstract class Actor
         {
             protected Actor()
