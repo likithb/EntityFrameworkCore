@@ -633,6 +633,7 @@ namespace Microsoft.EntityFrameworkCore
                     context.SaveChanges();
 
                     player.CurrentWeapon = weapon;
+                    context.Entry(player).Reference(p => p.CurrentWeapon).IsModified = true;
                     context.SaveChanges();
                 }
 
