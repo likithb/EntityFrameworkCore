@@ -16,6 +16,7 @@ using Remotion.Linq;
 using Remotion.Linq.Clauses;
 using Xunit;
 
+// ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.Infrastructure
 {
     public class CoreEventIdTest
@@ -44,7 +45,8 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                 { typeof(IServiceProvider), () => new FakeServiceProvider() },
                 { typeof(ICollection<IServiceProvider>), () => new List<IServiceProvider>() },
                 { typeof(IReadOnlyCollection<IPropertyBase>), () => new[] { property } },
-                { typeof(IncludeResultOperator), () => includeResultOperator }
+                { typeof(IncludeResultOperator), () => includeResultOperator },
+                { typeof(IProperty), () => property }
             };
 
             InMemoryTestHelpers.Instance.TestEventLogging(typeof(CoreEventId), typeof(CoreLoggerExtensions), fakeFactories);

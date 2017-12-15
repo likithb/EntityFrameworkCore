@@ -551,5 +551,38 @@ namespace Microsoft.EntityFrameworkCore.Internal
                 p.Context.Database.ProviderName,
                 p.ContextOptions.BuildOptionsFragment());
         }
+
+        /// <summary>
+        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
+        ///     directly from your code. This API may change or be removed in future releases.
+        /// </summary>
+        public static void ShadowPropertyCreated(
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] IProperty property)
+        {
+            var definition = CoreStrings.LogShadowPropertyCreated;
+
+            definition.Log(
+                diagnostics,
+                property.Name,
+                property.DeclaringEntityType.DisplayName());
+
+            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+            {
+                diagnostics.DiagnosticSource.Write(
+                    definition.EventId.Name,
+                    new PropertyEventData(
+                        definition,
+                        ShadowPropertyCreated,
+                        property));
+            }
+        }
+
+        private static string ShadowPropertyCreated(EventDefinitionBase definition, EventData payload)
+        {
+            var d = (EventDefinition<string, string>)definition;
+            var p = (PropertyEventData)payload;
+            return d.GenerateMessage(p.Property.Name, p.Property.DeclaringEntityType.DisplayName());
+        }
     }
 }

@@ -1902,6 +1902,18 @@ namespace Microsoft.EntityFrameworkCore.Internal
                 GetString("ClashingNonOwnedEntityType", nameof(entityType)),
                 entityType);
 
+        /// <summary>
+        ///     The property '{property}' on entity type '{entityType}' was created in shadow state because there are no eligible CLR members with a matching name.
+        /// </summary>
+        public static readonly EventDefinition<string, string> LogShadowPropertyCreated
+            = new EventDefinition<string, string>(
+                CoreEventId.ShadowPropertyCreated,
+                LogLevel.Information,
+                LoggerMessage.Define<string, string>(
+                    LogLevel.Information,
+                    CoreEventId.ShadowPropertyCreated,
+                    _resourceManager.GetString("LogShadowPropertyCreated")));
+
         private static string GetString(string name, params string[] formatterNames)
         {
             var value = _resourceManager.GetString(name);

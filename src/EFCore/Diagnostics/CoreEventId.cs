@@ -63,7 +63,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             SensitiveDataLoggingEnabledWarning = CoreBaseId + 400,
             ServiceProviderCreated,
             ManyServiceProvidersCreatedWarning,
-            ContextInitialized
+            ContextInitialized,
+
+            // Model events
+            ShadowPropertyCreated = CoreBaseId + 600
         }
 
         private static readonly string _updatePrefix = DbLoggerCategory.Update.Name + ".";
@@ -277,5 +280,21 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         ///     </para>
         /// </summary>
         public static readonly EventId ContextInitialized = MakeInfraId(Id.ContextInitialized);
+
+        private static readonly string _modelPrefix = DbLoggerCategory.Model.Name + ".";
+        private static EventId MakeModelId(Id id) => new EventId((int)id, _modelPrefix + id);
+
+        /// <summary>
+        ///     <para>
+        ///         A shadow property has been created.
+        ///     </para>
+        ///     <para>
+        ///         This event is in the <see cref="DbLoggerCategory.Model" /> category.
+        ///     </para>
+        ///     <para>
+        ///         This event uses the <see cref="PropertyEventData" /> payload when used with a <see cref="DiagnosticSource" />.
+        ///     </para>
+        /// </summary>
+        public static readonly EventId ShadowPropertyCreated = MakeModelId(Id.ShadowPropertyCreated);
     }
 }
